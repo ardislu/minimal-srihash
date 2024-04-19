@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <title>SRI Hash Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+      background: hsl(216deg 50% 92%);
+      inline-size: min(100% - 32px, 960px);
+      margin-inline: auto;
+      margin-block: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 1rem + 4.8vw, 4rem);
+      font-weight: 300;
+      margin: 0;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
+      display: flex;
+    }
+
+    li:not(:last-child)::after {
+      content: '•';
+      content: '•' / '';
+      padding: 8px;
+    }
+
+    a {
+      color: hsl(216deg 50% 40%);
+      font-weight: 700;
+      text-decoration: none;
+      transition: color 400ms;
+
+      &:hover,
+      &:focus {
+        color: hsl(216deg 50% 50%);
+        text-decoration: underline hsl(216deg 50% 35%) solid 2px;
+        transition: color 200ms;
+      }
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-block: 16px;
+    }
+
+    label {
+      flex-basis: 100%;
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    input {
+      flex: 1 1 min(100%, 600px);
+    }
+
+    input,
+    select,
+    button {
+      padding: 8px 12px;
+      font-size: 1rem;
+      border: 1px solid hsl(216deg 50% 50%);
+      border-radius: 4px;
+    }
+
+    button {
+      cursor: pointer;
+      background: hsl(216deg 60% 75%);
+      transition: background-color 400ms;
+
+      &:hover,
+      &:focus {
+        background: hsl(216deg 50% 77%);
+        transition: background-color 200ms;
+      }
+    }
+
+    .checkbox-container {
+      display: none;
+      flex-basis: 100%;
+      gap: 4px;
+      align-items: center;
+      line-height: 0;
+
+      & input {
+        flex-basis: 0;
+        inline-size: 16px;
+        block-size: 16px;
+        margin: 0;
+      }
+
+      & label {
+        flex-grow: 1;
+        font-size: 1.15rem;
+        font-weight: 400;
+      }
+    }
+
+    output {
+      flex-basis: 100%;
+      padding: 16px;
+      background: hsl(216deg 80% 98%);
+      border-radius: 4px;
+      display: none;
+    }
+
+    output:has(:not(code:empty)) {
+      display: revert;
+    }
+
+    code {
+      font-family: monospace;
+      font-size: 1.15rem;
+      line-height: 1.5;
+      white-space: pre-line;
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>SRI Hash Generator</h1>
+  <ul>
+    <li><a href="https://www.srihash.org">srihash.org</a></li>
+    <li><a href="https://github.com/ardislu/minimal-srihash">GitHub</a></li>
+  </ul>
+  <form>
+    <label for="url">Enter the URL of the resource you wish to use:</label>
+    <input id="url" name="url" type="url" required>
+    <select id="sriHash" name="sriHash" type="select">
+      <option value="SHA-256">SHA-256</option>
+      <option value="SHA-384">SHA-384</option>
+      <option value="SHA-512" selected>SHA-512</option>
+    </select>
+    <button>Hash!</button>
+
+    <div class="checkbox-container">
+      <input id="preload" name="preload" type="checkbox">
+      <label for="preload">Preload?</label>
+    </div>
+
+    <div class="checkbox-container">
+      <input id="esm" name="esm" type="checkbox">
+      <label for="esm">JavaScript module?</label>
+    </div>
+
+    <output name="output"><code></code></output>
+  </form>
+
+  <script type="module">
+    const form = document.querySelector('form');
+
+    const cache = {};
+    async function getSri(url) {
+      if (cache[url] === undefined) {
+        cache[url] = {};
+        const blob = await fetch(url).then(r => r.blob());
+        const buffer = await blob.arrayBuffer();
+        const hashPromises = [];
+        for (const algo of ['SHA-256', 'SHA-384', 'SHA-512']) {
+          hashPromises.push(crypto.subtle.digest(algo, buffer)
+            .then(hash => `${algo.replace('-', '').toLowerCase()}-${btoa(String.fromCharCode(...new Uint8Array(hash)))}`)
+            .then(sri => cache[url][algo] = sri)
+          );
+        }
+        await Promise.all(hashPromises);
+        cache[url].type = blob.type;
+      }
+      return cache[url];
+    }
+
+    function setCode(type, url, sri, preload, esm) {
+      const code = document.querySelector('code');
+      switch (`${type},${preload},${esm}`) {
+        case 'application/javascript,false,false':
+        case 'text/javascript,false,false': code.textContent = `<script src="${url}" integrity="${sri}" crossorigin><\/script>`; break;
+        case 'application/javascript,false,true':
+        case 'text/javascript,false,true': code.textContent = `<script type="module" src="${url}" integrity="${sri}" crossorigin><\/script>`; break;
+        case 'application/javascript,true,false':
+        case 'text/javascript,true,false': code.textContent = `<link rel="preload" as="script" href="${url}" integrity="${sri}" crossorigin>`; break;
+        case 'application/javascript,true,true':
+        case 'text/javascript,true,true': code.textContent = `<link rel="modulepreload" href="${url}" integrity="${sri}" crossorigin>`; break;
+        case 'text/css,false,false': code.textContent = `<link rel="stylesheet" href="${url}" integrity="${sri}" crossorigin>`; break;
+        case 'text/css,true,false': code.textContent = `<link rel="preload" as="style" href="${url}" integrity="${sri}" crossorigin>`; break;
+        case 'font/otf,true,false':
+        case 'font/ttf,true,false':
+        case 'font/woff,true,false':
+        case 'font/woff2,true,false': code.textContent = `<link rel="preload" as="font" type="${type}" href="${url}" integrity="${sri}" crossorigin>`; break;
+        default: code.textContent = `<link rel="preload" as="fetch" href="${url}" integrity="${sri}" crossorigin>`; break;
+      }
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const { url, sriHash, preload, esm } = e.target.elements;
+      const { type, ...sri } = await getSri(url.value);
+
+      // Reset checkboxes if form submitted via "Hash!" button
+      if (e?.submitter?.tagName === 'BUTTON') {
+        preload.checked = false;
+        esm.checked = false;
+        if (type === 'text/javascript' || type === 'application/javascript') {
+          preload.parentElement.style.setProperty('display', 'flex');
+          esm.parentElement.style.setProperty('display', 'flex');
+        }
+        else if (type === 'text/css') {
+          preload.parentElement.style.setProperty('display', 'flex');
+          esm.parentElement.style.setProperty('display', 'none');
+        }
+        else {
+          preload.checked = true;
+          preload.parentElement.style.setProperty('display', 'none');
+          esm.parentElement.style.setProperty('display', 'none');
+        }
+      }
+
+      setCode(type, url.value, sri[sriHash.value], preload.checked, esm.checked);
+    });
+
+    // Update code output on option checkbox or hash selection change
+    document.querySelectorAll('input[type="checkbox"],select').forEach(e => e.addEventListener('change', () => form.requestSubmit()));
+  </script>
+</body>
+
+</html>
