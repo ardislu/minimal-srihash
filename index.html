@@ -125,6 +125,26 @@
       line-height: 1.5;
       white-space: pre-line;
       word-break: break-all;
+
+      &::highlight(bracket) {
+        color: hsl(216deg 30% 60%);
+      }
+
+      &::highlight(equal) {
+        color: hsl(216deg 40% 40%);
+      }
+
+      &::highlight(tag) {
+        color: hsl(266deg 70% 50%)
+      }
+
+      &::highlight(attribute) {
+        color: hsl(216deg 70% 50%);
+      }
+
+      &::highlight(value) {
+        color: hsl(30deg 70% 50%);
+      }
     }
   </style>
 </head>
@@ -180,6 +200,18 @@
       return cache[url];
     }
 
+    function highlight(textNode, regex, token) {
+      const ranges = [];
+      for (const m of textNode.textContent.matchAll(regex)) {
+        const r = new Range();
+        r.setStart(textNode, m.index);
+        r.setEnd(textNode, m.index + m[0].length);
+        ranges.push(r);
+      }
+      const h = new Highlight(...ranges);
+      CSS.highlights.set(token, h);
+    }
+
     function setCode(type, url, sri, preload, esm) {
       const code = document.querySelector('code');
       switch (`${type},${preload},${esm}`) {
@@ -198,6 +230,14 @@
         case 'font/woff,true,false':
         case 'font/woff2,true,false': code.textContent = `<link rel="preload" as="font" type="${type}" href="${url}" integrity="${sri}" crossorigin>`; break;
         default: code.textContent = `<link rel="preload" as="fetch" href="${url}" integrity="${sri}" crossorigin>`; break;
+      }
+      if (CSS.highlights !== undefined) {
+        const textNode = code.childNodes[0];
+        highlight(textNode, /[<>]\/?/g, 'bracket');
+        highlight(textNode, /=/g, 'equal');
+        highlight(textNode, /(link|script)/g, 'tag');
+        highlight(textNode, /(href|src|integrity|crossorigin|type|rel|as)/g, 'attribute');
+        highlight(textNode, /".*?"/g, 'value');
       }
     }
 
