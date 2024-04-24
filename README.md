@@ -7,7 +7,7 @@ A minimal web page to generate ready-to-use `<link>` or `<script>` tags with
 Supports
 [`rel="preload"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/preload)
 and
-[`rel="modulepreload"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload).
+[`rel="modulepreload"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload) for assets that support SRI.
 
 Like [srihash.org](https://www.srihash.org/) but reduced to just the minimal
 amount of code.
