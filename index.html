@@ -195,7 +195,7 @@
         const hashPromises = [];
         for (const algo of ['SHA-256', 'SHA-384', 'SHA-512']) {
           hashPromises.push(crypto.subtle.digest(algo, buffer)
-            .then(hash => `${algo.replace('-', '').toLowerCase()}-${btoa(String.fromCharCode(...new Uint8Array(hash)))}`)
+            .then(hash => `${algo.replace('-', '').toLowerCase()}-${new Uint8Array(hash).toBase64()}`)
             .then(sri => cache[url][algo] = sri)
           );
         }
