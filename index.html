@@ -246,13 +246,15 @@
       }
     }
 
+    let previousType = '';
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const { url, sriHash, preload, esm } = e.target.elements;
       const { type, ...sri } = await getSri(url.value);
 
-      // Reset checkboxes if form submitted via "Hash!" button
-      if (e?.submitter?.tagName === 'BUTTON') {
+      // Reset checkboxes if form submitted via "Hash!" button and type has changed
+      if (e?.submitter?.tagName === 'BUTTON' && type !== previousType) {
+        previousType = type;
         preload.checked = false;
         esm.checked = false;
         if (type === 'text/javascript' || type === 'application/javascript') {
