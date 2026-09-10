@@ -277,6 +277,20 @@
 
     // Update code output on option checkbox or hash selection change
     document.querySelectorAll('input[type="checkbox"],select').forEach(e => e.addEventListener('change', () => form.requestSubmit()));
+
+    // Fix trailing newline on triple (or quad) click
+    const output = document.querySelector('output');
+    addEventListener('click', e => {
+      if (e.detail >= 3 && output.contains(e.target)) {
+        const range = document.createRange();
+        const textNode = output.firstChild.firstChild; // Assuming markup looks like <output><code>TEXT_NODE</code></output>
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, textNode.length);
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      };
+    });
   </script>
 </body>
 
