@@ -118,6 +118,11 @@
       background: hsl(216deg 80% 98%);
       border-radius: 4px;
       display: none;
+      transition: opacity 300ms;
+
+      @starting-style {
+        opacity: 0;
+      }
     }
 
     output:has(:not(code:empty)) {
@@ -185,6 +190,7 @@
 
   <script type="module">
     const form = document.querySelector('form');
+    const output = document.querySelector('output');
 
     const cache = {};
     async function getSri(url) {
@@ -246,29 +252,39 @@
       }
     }
 
+    let previousUrl = '';
     let previousType = '';
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const { url, sriHash, preload, esm } = e.target.elements;
       const { type, ...sri } = await getSri(url.value);
 
-      // Reset checkboxes if form submitted via "Hash!" button and type has changed
-      if (e?.submitter?.tagName === 'BUTTON' && type !== previousType) {
-        previousType = type;
-        preload.checked = false;
-        esm.checked = false;
-        if (type === 'text/javascript' || type === 'application/javascript') {
-          preload.parentElement.style.setProperty('display', 'flex');
-          esm.parentElement.style.setProperty('display', 'flex');
+      if (e?.submitter?.tagName === 'BUTTON') {
+        // Replay <output> transition in if the URL changed
+        if (url.value !== previousUrl) {
+          previousUrl = url.value;
+          output.remove();
+          form.insertAdjacentElement('beforeend', output);
         }
-        else if (type === 'text/css') {
-          preload.parentElement.style.setProperty('display', 'flex');
-          esm.parentElement.style.setProperty('display', 'none');
-        }
-        else {
-          preload.checked = true;
-          preload.parentElement.style.setProperty('display', 'none');
-          esm.parentElement.style.setProperty('display', 'none');
+
+        // Reset checkboxes if form submitted via "Hash!" button and type has changed
+        if (type !== previousType) {
+          previousType = type;
+          preload.checked = false;
+          esm.checked = false;
+          if (type === 'text/javascript' || type === 'application/javascript') {
+            preload.parentElement.style.setProperty('display', 'flex');
+            esm.parentElement.style.setProperty('display', 'flex');
+          }
+          else if (type === 'text/css') {
+            preload.parentElement.style.setProperty('display', 'flex');
+            esm.parentElement.style.setProperty('display', 'none');
+          }
+          else {
+            preload.checked = true;
+            preload.parentElement.style.setProperty('display', 'none');
+            esm.parentElement.style.setProperty('display', 'none');
+          }
         }
       }
 
@@ -279,7 +295,6 @@
     document.querySelectorAll('input[type="checkbox"],select').forEach(e => e.addEventListener('change', () => form.requestSubmit()));
 
     // Fix trailing newline on triple (or quad) click
-    const output = document.querySelector('output');
     addEventListener('click', e => {
       if (e.detail >= 3 && output.contains(e.target)) {
         const range = document.createRange();
